@@ -16,16 +16,40 @@ import MediaPlayer
 
 public class FXAudioPlayer: NSObject  {
     
+    public enum PlayStatus {
+        case playing
+        case paused
+        case stoped
+        case loading
+    }
+    
     private var audioPlayer: AVPlayer?
     private var audioUrls = [URL]()
     private var currentIndex: Int = 0
 
-    public var isPlaying = false {
-        didSet{
-            playStatus?(isPlaying)
+    public var status = PlayStatus.paused {
+        didSet {
+            playStatus?(status)
         }
     }
-    public var playStatus: ((_ isPlaying: Bool) -> Void)?
+    
+    public var isPlaying = false {
+        didSet{
+            status = isPlaying ? .playing : .paused
+        }
+    }
+    
+    public var isLoading = false {
+        didSet {
+            if isLoading {
+                status = .loading
+            }else {
+                status = isPlaying ? .playing : .paused
+            }
+        }
+    }
+    
+    public var playStatus: ((_ status: PlayStatus) -> Void)?
     
     public var isStartSeek = false
     
@@ -42,9 +66,12 @@ public class FXAudioPlayer: NSObject  {
     }
     
     private func setAudioPlayer() {
+        if audioUrls.isEmpty { return }
         
         let item = AVPlayerItem(url: audioUrls[currentIndex])
         item.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+        item.addObserver(self, forKeyPath: "playbackBufferEmpty", options: .new, context: nil)
+        item.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
         audioPlayer = AVPlayer(playerItem: item)
         
         audioPlayer?.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1), queue: DispatchQueue.main, using: {[weak self] (cmTime) in
@@ -61,24 +88,46 @@ public class FXAudioPlayer: NSObject  {
     
     private func setRemoteControl() {
         
-        UIApplication.shared.beginReceivingRemoteControlEvents()
+//        UIApplication.shared.beginReceivingRemoteControlEvents()
+
+        MPRemoteCommandCenter.shared().playCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            self?.play()
+            return .success
+        }
+
+        MPRemoteCommandCenter.shared().pauseCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            self?.pause()
+            return .success
+        }
         
-        MPRemoteCommandCenter.shared().playCommand.addTarget(self, action: #selector(play))
-        MPRemoteCommandCenter.shared().pauseCommand.addTarget(self, action: #selector(pause))
-        MPRemoteCommandCenter.shared().nextTrackCommand.addTarget(self, action: #selector(playNext))
-        MPRemoteCommandCenter.shared().previousTrackCommand.addTarget(self, action: #selector(playPrevious))
+        MPRemoteCommandCenter.shared().nextTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            self?.playNext()
+            return .success
+        }
+        
+        MPRemoteCommandCenter.shared().previousTrackCommand.addTarget {[weak self] (event) -> MPRemoteCommandHandlerStatus in
+            self?.playPrevious()
+            return .success
+        }
+        
     }
     
+    /// 更换 playeritem
     private func replacePlayerItem() {
         audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "status")
+        audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "playbackBufferEmpty")
+        audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "playbackLikelyToKeepUp")
         let item = AVPlayerItem(url: audioUrls[currentIndex])
         item.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+        item.addObserver(self, forKeyPath: "playbackBufferEmpty", options: .new, context: nil)
+        item.addObserver(self, forKeyPath: "playbackLikelyToKeepUp", options: .new, context: nil)
         audioPlayer?.replaceCurrentItem(with: item)
     }
     
+    /// 准备下一个
     private func prepareNext() {
         if audioPlayer == nil { return }
-        if currentIndex == 0 { return }
+        if currentIndex <= 1 { return }
         if currentIndex >= audioUrls.count - 1 {
             currentIndex = 0
         }else {
@@ -89,7 +138,15 @@ public class FXAudioPlayer: NSObject  {
     }
     
     private func setAudio(currentTime: Double, totalTime: Double) {
-        
+        if currentTime == totalTime {
+            if currentIndex == audioUrls.count - 1 {
+                isPlaying = false
+                status = .stoped
+            }else {
+                prepareNext()
+                isPlaying = true
+            }
+        }
         self.delegate?.audioPlayer(self, currentTime: currentTime, totalTime: totalTime)
         
         setLockScreenPlayingInfo(with: currentTime, totalTime: totalTime)
@@ -108,7 +165,9 @@ public class FXAudioPlayer: NSObject  {
     
     public override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         
-        if keyPath == "status", let playerItem = object as? AVPlayerItem {
+        guard let playerItem = object as? AVPlayerItem else { return }
+        
+        if keyPath == "status"{
             switch playerItem.status {
             case .readyToPlay:
                 if audioPlayer != nil {
@@ -125,31 +184,59 @@ public class FXAudioPlayer: NSObject  {
                 break
             }
         }
+        
+        else if keyPath == "playbackBufferEmpty" {
+            if playerItem.isPlaybackBufferEmpty {
+                self.isLoading = true
+            }
+        }
+        
+        else if keyPath == "playbackLikelyToKeepUp" {
+            print("playbackLikelyToKeepUp")
+            if playerItem.isPlaybackLikelyToKeepUp {
+                self.isLoading = false
+            }
+        }
     }
     
+    /// 设置播放URL
+    /// - Parameter audioUrls: url数组
     public func set(audioUrls: [URL]) {
+        if audioUrls.isEmpty { return }
         self.audioUrls = audioUrls
-        setAudioPlayer()
-    }
-    
-    @objc public func play() {
-        if audioUrls.count <= 0 { return }
-        if audioPlayer?.status != .readyToPlay { return }
         if audioPlayer == nil {
             setAudioPlayer()
         }else {
+            currentIndex = 0
+            replacePlayerItem()
+        }
+    }
+    
+    /// 播放
+    @objc public func play() {
+        if audioUrls.count <= 0 { return }
+//        if audioPlayer?.status != .readyToPlay { return }
+        if audioPlayer == nil {
+            setAudioPlayer()
+        }else {
+            if status == .stoped {
+                replacePlayerItem()
+            }
             audioPlayer?.play()
         }
         isPlaying = true
     }
     
+    /// 暂停
     @objc public func pause() {
         audioPlayer?.pause()
         isPlaying = false
     }
     
+    /// 播放下一个
     @objc public func playNext() {
         if audioPlayer == nil { return }
+        if audioUrls.count <= 1 { return }
         
         if currentIndex >= audioUrls.count - 1 {
             currentIndex = 0
@@ -161,8 +248,10 @@ public class FXAudioPlayer: NSObject  {
         isPlaying = true
     }
     
+    /// 播放上一个
     @objc public func playPrevious() {
         if audioPlayer == nil { return }
+        if audioUrls.count <= 1 { return }
         
         if currentIndex <= 0 {
             currentIndex = audioUrls.count - 1
@@ -174,22 +263,19 @@ public class FXAudioPlayer: NSObject  {
         isPlaying = true
     }
     
-    public func seek(to seconds: Double, completionHandler: @escaping (Bool) -> Void) {
+    public func seek(to seconds: Double, completionHandler: ((Bool) -> Void)? = nil ) {
         audioPlayer?.seek(to: CMTime(seconds: seconds, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), completionHandler: { (isFinished) in
-            completionHandler(isFinished)
+            completionHandler?(isFinished)
         })
     }
     
     deinit {
         audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "status")
-        audioPlayer?.pause()
+        audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "playbackBufferEmpty")
+        audioPlayer?.currentItem?.removeObserver(self, forKeyPath: "playbackLikelyToKeepUp")
+        pause()
         audioPlayer?.removeTimeObserver(self)
         audioPlayer = nil
-        
-        MPRemoteCommandCenter.shared().playCommand.removeTarget(self, action: #selector(play))
-        MPRemoteCommandCenter.shared().pauseCommand.removeTarget(self, action: #selector(pause))
-        MPRemoteCommandCenter.shared().nextTrackCommand.removeTarget(self, action: #selector(playNext))
-        MPRemoteCommandCenter.shared().previousTrackCommand.removeTarget(self, action: #selector(playPrevious))
         
         UIApplication.shared.endReceivingRemoteControlEvents()
     }

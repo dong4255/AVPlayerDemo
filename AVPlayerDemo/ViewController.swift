@@ -11,6 +11,7 @@ import AVFoundation
 
 class ViewController: UIViewController {
     
+    @IBOutlet weak var activityIV: UIActivityIndicatorView!
     
     @IBOutlet weak var playButton: UIButton!
     
@@ -27,9 +28,8 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         
-        let urlStringArray = ["http://101.227.216.151/amobile.music.tc.qq.com/C400002ebNvY22rDBy.m4a?guid=9677210256&vkey=9D6659CC4431543ABD3D1D81C47D17A53CD2CAA1926528F3085EC0A746ABFD24D4A27DB93029854E3DA5A4B30AFCF3E6F92D988655C80105&uin=0&fromtag=66",
-            "http://101.227.216.159/amobile.music.tc.qq.com/C4000031nsKs0yyZs0.m4a?guid=9677210256&vkey=F8B99B535EDD279F96CAA7E1B688E3AA8DA3099B3BA9B24164AE86C3967C54641522D32DC2C9EB5FA9473F0610B0E686D7CFA415F31E5316&uin=5619&fromtag=66",
-            "http://101.227.216.146/amobile.music.tc.qq.com/C400000b7aaR0vOevG.m4a?guid=9677210256&vkey=BF817C2181EA9B015BEC875CD7FCB1C435536E9CE5A85F0AEE71D259556DFAA86EA16D763223063E037B05E628A2B806D45F3693F5048333&uin=5619&fromtag=66"]
+        let urlStringArray = ["https://sharefs.yun.kugou.com/201910301117/8d40a6468a1169acd90f9d2a50437b51/G145/M04/1F/09/cZQEAFvJOg6ASldLAE0mYOFr70E210.mp3"]
+        
         var urlArray = [URL]()
         for urlString in urlStringArray {
             if let url = URL(string: urlString) {
@@ -38,8 +38,16 @@ class ViewController: UIViewController {
         }
         audioPlayer.set(audioUrls: urlArray)
         audioPlayer.delegate = self
-        audioPlayer.playStatus = {[weak self] (isPlaying) in
-            self?.playButton.setImage(isPlaying ? #imageLiteral(resourceName: "pause.png") : #imageLiteral(resourceName: "play.png"), for: .normal)
+        audioPlayer.playStatus = {[weak self] (status) in
+            if status == .loading {
+                self?.playButton.isHidden = true
+                self?.activityIV.startAnimating()
+            }else {
+                self?.activityIV.stopAnimating()
+                self?.playButton.isHidden = false
+                let isPlaying = status == .playing
+                self?.playButton.setImage(isPlaying ? #imageLiteral(resourceName: "pause.png") : #imageLiteral(resourceName: "play.png"), for: .normal)
+            }
         }
         
         timeSlider.addTarget(self, action: #selector(sliderTouchEndAction(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])

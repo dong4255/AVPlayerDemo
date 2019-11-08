@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="G16-O2-wea">
-    <device id="retina6_1" orientation="portrait">
-        <adaptation id="fullscreen"/>
-    </device>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15400" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="G16-O2-wea">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15404"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -80,6 +78,9 @@
                                     <constraint firstAttribute="height" constant="30" id="vZl-CU-vfs"/>
                                 </constraints>
                             </view>
+                            <activityIndicatorView hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="large" translatesAutoresizingMaskIntoConstraints="NO" id="xdn-G6-qN4">
+                                <rect key="frame" x="188.5" y="713.5" width="37" height="37"/>
+                            </activityIndicatorView>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -89,6 +90,7 @@
                             <constraint firstItem="jfz-S8-76r" firstAttribute="leading" secondItem="pqS-UA-lV5" secondAttribute="leading" id="9Zq-ej-f3t"/>
                             <constraint firstItem="zSS-Gm-Khj" firstAttribute="centerY" secondItem="wo8-XE-VhT" secondAttribute="centerY" id="E6E-4v-7Fx"/>
                             <constraint firstItem="JUa-DT-qIZ" firstAttribute="leading" secondItem="wo8-XE-VhT" secondAttribute="trailing" constant="50" id="GQj-xp-krQ"/>
+                            <constraint firstItem="xdn-G6-qN4" firstAttribute="centerX" secondItem="wo8-XE-VhT" secondAttribute="centerX" id="GaO-Nj-tXU"/>
                             <constraint firstItem="MLL-BQ-uJT" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="ILK-nk-U95"/>
                             <constraint firstItem="9jp-fr-btv" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="MhK-SW-RYi"/>
                             <constraint firstItem="MLL-BQ-uJT" firstAttribute="leading" secondItem="pqS-UA-lV5" secondAttribute="trailing" constant="16" id="SWg-Nf-6rz"/>
@@ -97,6 +99,7 @@
                             <constraint firstItem="JUa-DT-qIZ" firstAttribute="centerY" secondItem="wo8-XE-VhT" secondAttribute="centerY" id="bfs-sU-V42"/>
                             <constraint firstItem="Lli-G8-IDQ" firstAttribute="top" secondItem="wo8-XE-VhT" secondAttribute="bottom" constant="100" id="fCs-DU-nZG"/>
                             <constraint firstItem="MLL-BQ-uJT" firstAttribute="centerY" secondItem="pqS-UA-lV5" secondAttribute="centerY" id="hki-OL-BCF"/>
+                            <constraint firstItem="xdn-G6-qN4" firstAttribute="centerY" secondItem="wo8-XE-VhT" secondAttribute="centerY" id="hlw-Pr-MJq"/>
                             <constraint firstItem="9jp-fr-btv" firstAttribute="centerY" secondItem="pqS-UA-lV5" secondAttribute="centerY" id="mrM-YK-qDB"/>
                             <constraint firstItem="jfz-S8-76r" firstAttribute="trailing" secondItem="pqS-UA-lV5" secondAttribute="trailing" id="qpQ-74-OKS"/>
                             <constraint firstItem="pqS-UA-lV5" firstAttribute="top" secondItem="jfz-S8-76r" secondAttribute="bottom" constant="34" id="ry7-zf-4gj"/>
@@ -110,6 +113,7 @@
                         </barButtonItem>
                     </navigationItem>
                     <connections>
+                        <outlet property="activityIV" destination="xdn-G6-qN4" id="IVB-s1-zqB"/>
                         <outlet property="anotherTimeSlider" destination="jfz-S8-76r" id="YnM-f6-CPc"/>
                         <outlet property="currentTimeLabel" destination="9jp-fr-btv" id="DDy-AL-qAq"/>
                         <outlet property="playButton" destination="wo8-XE-VhT" id="ULq-Yn-7U6"/>
